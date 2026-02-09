@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using PayrollEngine.Domain.Model;
 using PayrollEngine.Domain.Model.Repository;
 
@@ -23,7 +23,7 @@ internal sealed class PayrollRepositoryScriptCommand : PayrollRepositoryCommandB
     /// <param name="scriptNames">The script names</param>
     /// <param name="overrideType">The override type</param>
     /// <returns>The derived scripts, ordered by derivation level</returns>
-    internal async Task<IEnumerable<Script>> GetDerivedScriptsAsync(
+    internal async Task<IEnumerable<DerivedScript>> GetDerivedScriptsAsync(
         IScriptRepository scriptRepository,
         PayrollQuery query, IEnumerable<string> scriptNames = null,
         OverrideType? overrideType = null)
@@ -64,10 +64,10 @@ internal sealed class PayrollRepositoryScriptCommand : PayrollRepositoryCommandB
 
         // parameters
         var parameters = new DbParameterCollection();
-        parameters.Add(DbSchema.ParameterGetDerivedScripts.TenantId, query.TenantId);
-        parameters.Add(DbSchema.ParameterGetDerivedScripts.PayrollId, query.PayrollId);
-        parameters.Add(DbSchema.ParameterGetDerivedScripts.RegulationDate, query.RegulationDate);
-        parameters.Add(DbSchema.ParameterGetDerivedScripts.CreatedBefore, query.EvaluationDate);
+        parameters.Add(DbSchema.ParameterGetDerivedScripts.TenantId, query.TenantId, DbType.Int32);
+        parameters.Add(DbSchema.ParameterGetDerivedScripts.PayrollId, query.PayrollId, DbType.Int32);
+        parameters.Add(DbSchema.ParameterGetDerivedScripts.RegulationDate, query.RegulationDate, DbType.DateTime2);
+        parameters.Add(DbSchema.ParameterGetDerivedScripts.CreatedBefore, query.EvaluationDate, DbType.DateTime2);
         if (names != null && names.Any())
         {
             parameters.Add(DbSchema.ParameterGetDerivedScripts.ScriptNames,
@@ -81,16 +81,18 @@ internal sealed class PayrollRepositoryScriptCommand : PayrollRepositoryCommandB
         BuildDerivedScripts(scripts, overrideType);
 
         // build script sets
-        var scriptSets = new List<Script>();
+        var scriptSets = new List<DerivedScript>();
         foreach (var script in scripts)
         {
-            var regulationId = await scriptRepository.GetParentIdAsync(DbContext, script.Id);
-            if (!regulationId.HasValue)
+            // load script content manually
+            var scriptSet = await scriptRepository.GetAsync(DbContext, script.RegulationId, script.Id);
+            var derivedScriptSte = new DerivedScript(scriptSet)
             {
-                throw new PayrollException($"Unknown regulation of script {script.Name} with id {script.Id}.");
-            }
-            var scriptSet = await scriptRepository.GetAsync(DbContext, regulationId.Value, script.Id);
-            scriptSets.Add(scriptSet);
+                RegulationId = script.RegulationId,
+                Level = script.Level,
+                Priority = script.Priority
+            };
+            scriptSets.Add(derivedScriptSte);
         }
 
         return scriptSets;

@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using PayrollEngine.Domain.Model;
 
 namespace PayrollEngine.Persistence;
@@ -14,7 +14,7 @@ internal sealed class PayrollRepositoryLookupValuesCommand : PayrollRepositoryCo
     {
     }
 
-    internal async Task<IEnumerable<LookupValue>> GetDerivedLookupValuesAsync(PayrollQuery query,
+    internal async Task<IEnumerable<DerivedLookupValue>> GetDerivedLookupValuesAsync(PayrollQuery query,
         IEnumerable<string> lookupNames = null, IEnumerable<string> lookupKeys = null,
         OverrideType? overrideType = null)
     {
@@ -64,10 +64,10 @@ internal sealed class PayrollRepositoryLookupValuesCommand : PayrollRepositoryCo
 
         // parameters
         var parameters = new DbParameterCollection();
-        parameters.Add(DbSchema.ParameterGetDerivedLookupValues.TenantId, query.TenantId);
-        parameters.Add(DbSchema.ParameterGetDerivedLookupValues.PayrollId, query.PayrollId);
-        parameters.Add(DbSchema.ParameterGetDerivedLookupValues.RegulationDate, query.RegulationDate);
-        parameters.Add(DbSchema.ParameterGetDerivedLookupValues.CreatedBefore, query.EvaluationDate);
+        parameters.Add(DbSchema.ParameterGetDerivedLookupValues.TenantId, query.TenantId, DbType.Int32);
+        parameters.Add(DbSchema.ParameterGetDerivedLookupValues.PayrollId, query.PayrollId, DbType.Int32);
+        parameters.Add(DbSchema.ParameterGetDerivedLookupValues.RegulationDate, query.RegulationDate, DbType.DateTime2);
+        parameters.Add(DbSchema.ParameterGetDerivedLookupValues.CreatedBefore, query.EvaluationDate, DbType.DateTime2);
         if (names != null && names.Any())
         {
             parameters.Add(DbSchema.ParameterGetDerivedLookupValues.LookupNames,

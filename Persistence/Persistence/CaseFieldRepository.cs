@@ -1,16 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Data;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using Task = System.Threading.Tasks.Task;
 using PayrollEngine.Domain.Model;
-using PayrollEngine.Domain.Model.Repository;
 using PayrollEngine.Serialization;
+using PayrollEngine.Domain.Model.Repository;
 
 namespace PayrollEngine.Persistence;
 
-public class CaseFieldRepository(ICaseFieldAuditRepository auditRepository, bool auditDisabled) :
-    TrackChildDomainRepository<CaseField, CaseFieldAudit>(DbSchema.Tables.CaseField, DbSchema.CaseFieldColumn.CaseId,
-        auditRepository, auditDisabled), ICaseFieldRepository
+public class CaseFieldRepository(IRegulationRepository regulationRepository, ICaseRepository caseRepository,
+    ICaseFieldAuditRepository auditRepository, bool auditDisabled) :
+    TrackChildDomainRepository<CaseField, CaseFieldAudit>(regulationRepository, DbSchema.Tables.CaseField,
+        DbSchema.CaseFieldColumn.CaseId, auditRepository, auditDisabled), ICaseFieldRepository
 {
+    private ICaseRepository CaseRepository { get; } = caseRepository;
+
     public async Task<bool> ExistsAnyAsync(IDbContext context, int caseId, IEnumerable<string> caseFieldNames) =>
         await ExistsAnyAsync(context, DbSchema.CaseFieldColumn.CaseId, caseId, DbSchema.CaseFieldColumn.Name, caseFieldNames);
 
@@ -60,20 +65,20 @@ public class CaseFieldRepository(ICaseFieldAuditRepository auditRepository, bool
         parameters.Add(nameof(caseField.NameLocalizations), JsonSerializer.SerializeNamedDictionary(caseField.NameLocalizations));
         parameters.Add(nameof(caseField.Description), caseField.Description);
         parameters.Add(nameof(caseField.DescriptionLocalizations), JsonSerializer.SerializeNamedDictionary(caseField.DescriptionLocalizations));
-        parameters.Add(nameof(caseField.ValueType), caseField.ValueType);
-        parameters.Add(nameof(caseField.ValueScope), caseField.ValueScope);
-        parameters.Add(nameof(caseField.TimeType), caseField.TimeType);
-        parameters.Add(nameof(caseField.TimeUnit), caseField.TimeUnit);
-        parameters.Add(nameof(caseField.PeriodAggregation), caseField.PeriodAggregation);
-        parameters.Add(nameof(caseField.OverrideType), caseField.OverrideType);
-        parameters.Add(nameof(caseField.CancellationMode), caseField.CancellationMode);
-        parameters.Add(nameof(caseField.ValueCreationMode), caseField.ValueCreationMode);
+        parameters.Add(nameof(caseField.ValueType), caseField.ValueType, DbType.Int32);
+        parameters.Add(nameof(caseField.ValueScope), caseField.ValueScope, DbType.Int32);
+        parameters.Add(nameof(caseField.TimeType), caseField.TimeType, DbType.Int32);
+        parameters.Add(nameof(caseField.TimeUnit), caseField.TimeUnit, DbType.Int32);
+        parameters.Add(nameof(caseField.PeriodAggregation), caseField.PeriodAggregation, DbType.Int32);
+        parameters.Add(nameof(caseField.OverrideType), caseField.OverrideType, DbType.Int32);
+        parameters.Add(nameof(caseField.CancellationMode), caseField.CancellationMode, DbType.Int32);
+        parameters.Add(nameof(caseField.ValueCreationMode), caseField.ValueCreationMode, DbType.Int32);
         parameters.Add(nameof(caseField.Culture), caseField.Culture);
-        parameters.Add(nameof(caseField.ValueMandatory), caseField.ValueMandatory);
-        parameters.Add(nameof(caseField.Order), caseField.Order);
-        parameters.Add(nameof(caseField.StartDateType), caseField.StartDateType);
-        parameters.Add(nameof(caseField.EndDateType), caseField.EndDateType);
-        parameters.Add(nameof(caseField.EndMandatory), caseField.EndMandatory);
+        parameters.Add(nameof(caseField.ValueMandatory), caseField.ValueMandatory, DbType.Boolean);
+        parameters.Add(nameof(caseField.Order), caseField.Order, DbType.Int32);
+        parameters.Add(nameof(caseField.StartDateType), caseField.StartDateType, DbType.Int32);
+        parameters.Add(nameof(caseField.EndDateType), caseField.EndDateType, DbType.Int32);
+        parameters.Add(nameof(caseField.EndMandatory), caseField.EndMandatory, DbType.Boolean);
         parameters.Add(nameof(caseField.DefaultStart), caseField.DefaultStart);
         parameters.Add(nameof(caseField.DefaultEnd), caseField.DefaultEnd);
         parameters.Add(nameof(caseField.DefaultValue), caseField.DefaultValue);
@@ -81,12 +86,35 @@ public class CaseFieldRepository(ICaseFieldAuditRepository auditRepository, bool
         // json collections
         parameters.Add(nameof(caseField.Tags), JsonSerializer.SerializeList(caseField.Tags));
         parameters.Add(nameof(caseField.Clusters), JsonSerializer.SerializeList(caseField.Clusters));
-        parameters.Add(nameof(caseField.BuildActions), JsonSerializer.SerializeList(caseField.BuildActions));
-        parameters.Add(nameof(caseField.ValidateActions), JsonSerializer.SerializeList(caseField.ValidateActions));
         parameters.Add(nameof(caseField.Attributes), JsonSerializer.SerializeNamedDictionary(caseField.Attributes));
         parameters.Add(nameof(caseField.ValueAttributes), JsonSerializer.SerializeNamedDictionary(caseField.ValueAttributes));
 
         // base fields
         base.GetObjectData(caseField, parameters);
+    }
+
+    public override async Task<CaseField> CreateAsync(IDbContext context, int caseId, CaseField caseField)
+    {
+        await EnsureNamespaceAsync(context, caseId, caseField);
+        return await base.CreateAsync(context, caseId, caseField);
+    }
+
+    public override async Task<CaseField> UpdateAsync(IDbContext context, int caseId, CaseField caseField)
+    {
+        await EnsureNamespaceAsync(context, caseId, caseField);
+        return await base.UpdateAsync(context, caseId, caseField);
+    }
+
+    private async Task EnsureNamespaceAsync(IDbContext context, int caseId, CaseField caseField)
+    {
+        // regulation
+        var regulationId = await CaseRepository.GetParentIdAsync(context, caseId);
+        if (!regulationId.HasValue)
+        {
+            return;
+        }
+
+        // namespace
+        await ApplyNamespaceAsync(context, regulationId.Value, caseField);
     }
 }

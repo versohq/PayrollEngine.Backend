@@ -1,10 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using PayrollEngine.Domain.Model;
+using System;
+using System.Data;
 using System.Linq;
+using System.Globalization;
 using System.Threading.Tasks;
-using PayrollEngine.Domain.Model;
-using PayrollEngine.Domain.Model.Repository;
+using System.Collections.Generic;
 using Task = System.Threading.Tasks.Task;
+using PayrollEngine.Domain.Model.Repository;
 
 namespace PayrollEngine.Persistence;
 
@@ -25,10 +27,10 @@ public abstract class CaseChangeRepository<T>(string tableName, string parentFie
 
     protected override void GetObjectCreateData(T caseChange, DbParameterCollection parameters)
     {
-        parameters.Add(nameof(caseChange.UserId), caseChange.UserId);
-        parameters.Add(nameof(caseChange.DivisionId), caseChange.DivisionId);
+        parameters.Add(nameof(caseChange.UserId), caseChange.UserId, DbType.Int32);
+        parameters.Add(nameof(caseChange.DivisionId), caseChange.DivisionId, DbType.Int32);
         parameters.Add(nameof(caseChange.Reason), caseChange.Reason);
-        parameters.Add(nameof(caseChange.CancellationType), caseChange.CancellationType);
+        parameters.Add(nameof(caseChange.CancellationType), caseChange.CancellationType, DbType.Int32);
         parameters.Add(nameof(caseChange.ValidationCaseName), caseChange.ValidationCaseName);
         parameters.Add(nameof(caseChange.Forecast), caseChange.Forecast);
         base.GetObjectCreateData(caseChange, parameters);
@@ -36,8 +38,8 @@ public abstract class CaseChangeRepository<T>(string tableName, string parentFie
 
     protected override void GetObjectData(T caseChange, DbParameterCollection parameters)
     {
-        parameters.Add(nameof(caseChange.CancellationId), caseChange.CancellationId);
-        parameters.Add(nameof(caseChange.CancellationDate), caseChange.CancellationDate);
+        parameters.Add(nameof(caseChange.CancellationId), caseChange.CancellationId, DbType.Int32);
+        parameters.Add(nameof(caseChange.CancellationDate), caseChange.CancellationDate, DbType.DateTime2);
         base.GetObjectData(caseChange, parameters);
     }
 
@@ -328,6 +330,13 @@ public abstract class CaseChangeRepository<T>(string tableName, string parentFie
             caseValue.CaseName = @case.Name;
             caseValue.CaseNameLocalizations = @case.NameLocalizations;
 
+            // culture
+            caseField.Culture =
+                // culture priority 1: case value
+                caseValue.Culture ??
+                // culture priority 2 to 5: employee > division > tenant > system
+                culture;
+
             // case field name
             caseValue.CaseFieldNameLocalizations = caseField.NameLocalizations;
 
@@ -468,7 +477,13 @@ public abstract class CaseChangeRepository<T>(string tableName, string parentFie
         {
             throw new PayrollException($"Unknown case change tenant with id {tenantId}.");
         }
-        return tenant.Culture;
+        if (!string.IsNullOrWhiteSpace(tenant.Culture))
+        {
+            return tenant.Culture;
+        }
+
+        // priority 4: system
+        return CultureInfo.CurrentCulture.Name;
     }
 
     private static bool EqualCaseValue(CaseValue left, CaseValue right)

@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using PayrollEngine.Domain.Model;
 
 namespace PayrollEngine.Persistence;
@@ -14,7 +14,7 @@ internal sealed class PayrollRepositoryReportTemplatesCommand : PayrollRepositor
     {
     }
 
-    internal async Task<IEnumerable<ReportTemplate>> GetDerivedReportTemplatesAsync(PayrollQuery query,
+    internal async Task<IEnumerable<DerivedReportTemplate>> GetDerivedReportTemplatesAsync(PayrollQuery query,
         IEnumerable<string> reportNames = null, string culture = null, OverrideType? overrideType = null)
     {
         // query check
@@ -48,10 +48,10 @@ internal sealed class PayrollRepositoryReportTemplatesCommand : PayrollRepositor
 
         // parameters
         var parameters = new DbParameterCollection();
-        parameters.Add(DbSchema.ParameterGetDerivedReportTemplates.TenantId, query.TenantId);
-        parameters.Add(DbSchema.ParameterGetDerivedReportTemplates.PayrollId, query.PayrollId);
-        parameters.Add(DbSchema.ParameterGetDerivedReportTemplates.RegulationDate, query.RegulationDate);
-        parameters.Add(DbSchema.ParameterGetDerivedReportTemplates.CreatedBefore, query.EvaluationDate);
+        parameters.Add(DbSchema.ParameterGetDerivedReportTemplates.TenantId, query.TenantId, DbType.Int32);
+        parameters.Add(DbSchema.ParameterGetDerivedReportTemplates.PayrollId, query.PayrollId, DbType.Int32);
+        parameters.Add(DbSchema.ParameterGetDerivedReportTemplates.RegulationDate, query.RegulationDate, DbType.DateTime2);
+        parameters.Add(DbSchema.ParameterGetDerivedReportTemplates.CreatedBefore, query.EvaluationDate, DbType.DateTime2);
         if (names != null && names.Any())
         {
             parameters.Add(DbSchema.ParameterGetDerivedReportTemplates.ReportNames,

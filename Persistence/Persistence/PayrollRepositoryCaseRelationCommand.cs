@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using PayrollEngine.Domain.Model;
 
 namespace PayrollEngine.Persistence;
@@ -14,7 +14,7 @@ internal sealed class PayrollRepositoryCaseRelationCommand : PayrollRepositoryCo
     {
     }
 
-    internal async Task<IEnumerable<CaseRelation>> GetDerivedCaseRelationsAsync(PayrollQuery query,
+    internal async Task<IEnumerable<DerivedCaseRelation>> GetDerivedCaseRelationsAsync(PayrollQuery query,
         string sourceCaseName = null, string targetCaseName = null,
         OverrideType? overrideType = null, ClusterSet clusterSet = null)
     {
@@ -35,10 +35,10 @@ internal sealed class PayrollRepositoryCaseRelationCommand : PayrollRepositoryCo
         query.EvaluationDate ??= Date.Now;
         // retrieve all derived case relations (stored procedure)
         var parameters = new DbParameterCollection();
-        parameters.Add(DbSchema.ParameterGetDerivedCaseRelations.TenantId, query.TenantId);
-        parameters.Add(DbSchema.ParameterGetDerivedCaseRelations.PayrollId, query.PayrollId);
-        parameters.Add(DbSchema.ParameterGetDerivedCaseRelations.RegulationDate, query.RegulationDate);
-        parameters.Add(DbSchema.ParameterGetDerivedCaseRelations.CreatedBefore, query.EvaluationDate);
+        parameters.Add(DbSchema.ParameterGetDerivedCaseRelations.TenantId, query.TenantId, DbType.Int32);
+        parameters.Add(DbSchema.ParameterGetDerivedCaseRelations.PayrollId, query.PayrollId, DbType.Int32);
+        parameters.Add(DbSchema.ParameterGetDerivedCaseRelations.RegulationDate, query.RegulationDate, DbType.DateTime2);
+        parameters.Add(DbSchema.ParameterGetDerivedCaseRelations.CreatedBefore, query.EvaluationDate, DbType.DateTime2);
 
         // source and target case
         if (sourceCaseName != null)

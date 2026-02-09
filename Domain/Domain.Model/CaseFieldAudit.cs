@@ -54,7 +54,7 @@ public class CaseFieldAudit : AuditDomainObject, IDomainAttributeObject
     public CaseFieldTimeUnit TimeUnit { get; set; }
 
     /// <summary>
-    /// The period aggregation type for <see cref="CaseFieldTimeType.Period"/>
+    /// The period aggregation type
     /// </summary>
     public CaseFieldAggregationType PeriodAggregation { get; set; }
 
@@ -132,16 +132,6 @@ public class CaseFieldAudit : AuditDomainObject, IDomainAttributeObject
     /// The case field clusters
     /// </summary>
     public List<string> Clusters { get; set; }
-
-    /// <summary>
-    /// The case field build actions
-    /// </summary>
-    public List<string> BuildActions { get; set; }
-
-    /// <summary>
-    /// The case field validate actions
-    /// </summary>
-    public List<string> ValidateActions { get; set; }
 
     /// <summary>
     /// Custom attributes
